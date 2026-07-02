@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мой первый AI-проект</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #f5f7fa 0%, #8fbaff 100%); min-height: 100vh; padding-bottom: 50px; }
+        .hero { padding: 80px 20px; background: rgba(255, 255, 255, 0.9); border-radius: 20px; margin-bottom: 50px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .card { border: none; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); transition: 0.3s; }
+        .chat-container { background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .chat-messages { height: 300px; overflow-y: auto; background-color: #f8f9fa; display: flex; flex-direction: column; }
+        .msg { margin: 10px; padding: 10px; border-radius: 10px; max-width: 80%; }
+        .user-msg { align-self: flex-end; background: #0d6efd; color: white; }
+        .ai-msg { align-self: flex-start; background: #e9ecef; }
+        .loading-msg { align-self: flex-start; color: #6c757d; font-style: italic; margin-left: 10px; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+
+    <div class="container mt-5">
+        <header class="hero text-center">
+            <h1 class="display-4 fw-bold">Мой первый AI-проект</h1>
+            <p class="lead text-muted">Исследуем возможности искусственного интеллекта вместе</p>
+        </header>
+
+        <div class="row g-4 mb-5">
+            <div class="col-md-4"><div class="card h-100 p-3"><div class="card-body">🚀 <h5>Быстрое создание</h5></div></div></div>
+            <div class="col-md-4"><div class="card h-100 p-3"><div class="card-body">🤖 <h5>Помощник AI</h5></div></div></div>
+            <div class="col-md-4"><div class="card h-100 p-3 border-danger border-2"><div class="card-body text-danger">🎨 <h5>Красивый дизайн</h5></div></div></div>
+        </div>
+
+        <section class="chat-container mb-5">
+            <div class="p-4 border-bottom d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">Чат с AI</h4>
+                <div class="d-flex gap-2">
+                    <select id="role-select" class="form-select form-select-sm">
+                        <option value="Ты — полезный AI ассистент.">Обычный AI</option>
+                        <option value="Ты — опытный врач. Отвечай профессионально, но понятно.">Доктор</option>
+                        <option value="Ты — строгий профессор университета. Используй научный стиль.">Профессор</option>
+                        <option value="Ты — креативный сценарист.">Сценарист</option>
+                    </select>
+                    <button id="new-chat-btn" class="btn btn-outline-danger btn-sm">Новый чат</button>
+                </div>
+            </div>
+            <div id="chat-messages" class="chat-messages p-4"></div>
+            <div class="p-3 bg-light d-flex gap-2">
+                <input type="text" id="user-input" class="form-control" placeholder="Напишите сообщение...">
+                <button id="send-btn" class="btn btn-primary">Отправить</button>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const API_KEY = "AQ.Ab8RN6LI9RqVDrmUMukg16bfmslMY1xYW60ERkovPjzO7erq-g";
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${API_KEY}`;
+
+        const chatBox = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const newChatBtn = document.getElementById('new-chat-btn');
+        const roleSelect = document.getElementById('role-select');
+
+        newChatBtn.addEventListener('click', () => {
+            chatBox.innerHTML = '<div class="text-center text-muted small mt-2">Чат начат заново.</div>';
+        });
+
+        async function sendMessage() {
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            chatBox.innerHTML += `<div class="msg user-msg">${text}</div>`;
+            userInput.value = '';
+
+            const loader = document.createElement('div');
+            loader.className = 'loading-msg';
+            loader.innerText = 'Генерирую ответ...';
+            chatBox.appendChild(loader);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                // Добавляем требование краткости к системной роли
+                const systemRole = roleSelect.value;
+                const fullInstruction = `${systemRole} Отвечай кратко и информативно.`;
+                
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: `${fullInstruction}\n\n${text}` }] }] })
+                });
+
+                const data = await response.json();
+                const aiText = data.candidates[0].content.parts[0].text;
+
+                chatBox.removeChild(loader);
+                chatBox.innerHTML += `<div class="msg ai-msg">${aiText}</div>`;
+            } catch (error) {
+                chatBox.removeChild(loader);
+                chatBox.innerHTML += `<div class="msg ai-msg text-danger">Ошибка: не удалось связаться с AI.</div>`;
+            }
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+    </script>
+</body>
+</html>
